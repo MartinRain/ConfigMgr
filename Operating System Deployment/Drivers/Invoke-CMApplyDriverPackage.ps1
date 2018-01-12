@@ -235,9 +235,9 @@ Process {
 		try {
 			Write-CMLogEntry -Value "Starting package content download process, this might take some time" -Severity 1
 			
-			if (Test-Path -Path "C:\Windows\CCM\OSDDownloadContent.exe") {
+			if (Test-Path -Path "$env:SystemRoot\CCM\OSDDownloadContent.exe") {
 				Write-CMLogEntry -Value "Starting package content download process (FullOS), this might take some time" -Severity 1
-				$ReturnCode = Invoke-Executable -FilePath "C:\Windows\CCM\OSDDownloadContent.exe"
+				$ReturnCode = Invoke-Executable -FilePath "$env:SystemRoot\CCM\OSDDownloadContent.exe"
 			}
 			else {
 				Write-CMLogEntry -Value "Starting package content download process (WinPE), this might take some time" -Severity 1
