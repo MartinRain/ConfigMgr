@@ -476,11 +476,6 @@ Process {
 						# Match operating system criteria per manufacturer for Windows 10 packages only
 						if ($OSName -like "Windows 10") {
 							switch ($ComputerManufacturer) {
-								"Hewlett-Packard" {
-									if ($Package.PackageName -match ([System.Version]$OSImageVersion).Build) {
-										$MatchFound = $true
-									}
-								}
 								"Microsoft" {
 									if ($Package.PackageName -match $OSImageVersion) {
 										$MatchFound = $true
@@ -558,7 +553,12 @@ Process {
 							# Determine matching driver package from array list with vendor specific solutions
 							if ($ComputerManufacturer -eq "Hewlett-Packard") {
 								Write-CMLogEntry -Value "Vendor specific matching required before downloading content. Attempting to match $($ComputerManufacturer) driver package based on OS build number: $($OSImageVersion)" -Severity 1
-								$Package = ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
+								if ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) {
+									$Package = ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
+								}
+								else {
+									$Package = $PackageList | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
+								}
 							}
 							else {
 								$Package = $PackageList | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
