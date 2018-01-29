@@ -235,9 +235,9 @@ Process {
 		try {
 			Write-CMLogEntry -Value "Starting package content download process, this might take some time" -Severity 1
 			
-			if (Test-Path -Path "C:\Windows\CCM\OSDDownloadContent.exe") {
+			if (Test-Path -Path "$env:SystemRoot\CCM\OSDDownloadContent.exe") {
 				Write-CMLogEntry -Value "Starting package content download process (FullOS), this might take some time" -Severity 1
-				$ReturnCode = Invoke-Executable -FilePath "C:\Windows\CCM\OSDDownloadContent.exe"
+				$ReturnCode = Invoke-Executable -FilePath "$env:SystemRoot\CCM\OSDDownloadContent.exe"
 			}
 			else {
 				Write-CMLogEntry -Value "Starting package content download process (WinPE), this might take some time" -Severity 1
@@ -505,15 +505,10 @@ Process {
 
 					# Match manufacturer, operating system name and architecture criteria
 					if ($ComputerDetectionResult -eq $true) {
-						if (($ComputerManufacturer -match $Package.PackageManufacturer) -and ($Package.PackageName -match $OSName) -and ($Package.PackageName -match $OSImageArchitecture)) {
+						if (($Package.PackageDescription -match "^$($ComputerDetectionMethod)$") -and ($ComputerManufacturer -match $Package.PackageManufacturer) -and ($Package.PackageName -match $OSName) -and ($Package.PackageName -match $OSImageArchitecture)) {
 							# Match operating system criteria per manufacturer for Windows 10 packages only
 							if ($OSName -like "Windows 10") {
 								switch ($ComputerManufacturer) {
-									"Hewlett-Packard" {
-										if ($Package.PackageName -match ([System.Version]$OSImageVersion).Build) {
-											$MatchFound = $true
-										}
-									}
 									"Microsoft" {
 										if ($Package.PackageName -match $OSImageVersion) {
 											$MatchFound = $true
@@ -608,7 +603,12 @@ Process {
 							# Determine matching driver package from array list with vendor specific solutions
 							if (($ComputerManufacturer -like "Hewlett-Packard") -and ($OSName -like "Windows 10")) {
 								Write-CMLogEntry -Value "Vendor specific matching required before downloading content. Attempting to match $($ComputerManufacturer) driver package based on OS build number: $($OSImageVersion)" -Severity 1
-								$Package = ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
+								if ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) {
+									$Package = ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
+								}
+								else {
+									$Package = $PackageList | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
+								}
 							}
 							else {
 								$Package = $PackageList | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
