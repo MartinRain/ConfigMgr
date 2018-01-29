@@ -47,12 +47,15 @@ param (
 	[parameter(Mandatory = $true, HelpMessage = "Set the URI for the ConfigMgr WebService.")]
 	[ValidateNotNullOrEmpty()]
 	[string]$URI,
+
 	[parameter(Mandatory = $true, HelpMessage = "Specify the known secret key for the ConfigMgr WebService.")]
 	[ValidateNotNullOrEmpty()]
 	[string]$SecretKey,
+
 	[parameter(Mandatory = $false, HelpMessage = "Define a different deployment scenario other than the default behavior. Choose between BareMetal (default), OSUpgrade or DriverUpdate.")]
 	[ValidateSet("BareMetal", "OSUpgrade", "BIOSUpdate")]
 	[string]$DeploymentType = "BareMetal",
+
 	[parameter(Mandatory = $false, HelpMessage = "Define a filter used when calling ConfigMgr WebService to only return objects matching the filter.")]
 	[ValidateNotNullOrEmpty()]
 	[string]$Filter = [System.String]::Empty
@@ -70,12 +73,12 @@ Process {
 	# Set Log Path
 	switch ($DeploymentType) {
 		"OSUpgrade" {
-			$LogsDirectory = Join-Path $env:SystemRoot "Temp"
+			$LogsDirectory = Join-Path -Path $env:SystemRoot -ChildPath "Temp"
 		}
 		"BIOSUpdate" {
-			$LogsDirectory = Join-Path $env:SystemRoot "Temp"
+			$LogsDirectory = Join-Path -Path $env:SystemRoot -ChildPath "Temp"
 		}
-		default {
+		Default {
 			$LogsDirectory = $Script:TSEnvironment.Value("_SMSTSLogPath")
 		}
 	}
