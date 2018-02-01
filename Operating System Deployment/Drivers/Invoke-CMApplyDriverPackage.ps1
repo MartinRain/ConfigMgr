@@ -492,7 +492,7 @@ Process {
 					$ComputerDetectionResult = $false
 					switch ($ComputerDetectionMethod) {
 						"ComputerModel" {
-							if ($Package.PackageName.Split("-").Replace($ComputerManufacturer, "").Trim()[1] -match $ComputerModel) {
+							if ($Package.PackageName.Split("-").Replace($ComputerManufacturer, "").Trim()[1] -eq $ComputerModel) {
 								Write-CMLogEntry -Value "Match found for computer model using detection method: $($ComputerDetectionMethod) ($($ComputerModel))" -Severity 1
 								$ComputerDetectionResult = $true
 							}
@@ -508,30 +508,8 @@ Process {
 					# Match manufacturer, operating system name and architecture criteria
 					if ($ComputerDetectionResult -eq $true) {
 						if (($ComputerManufacturer -match $Package.PackageManufacturer) -and ($Package.PackageName -match $OSName) -and ($Package.PackageName -match $OSImageArchitecture)) {
-							# Match operating system criteria per manufacturer for Windows 10 packages only
-							if ($OSName -like "Windows 10") {
-								switch ($ComputerManufacturer) {
-									"Microsoft" {
-										if ($Package.PackageName -match $OSImageVersion) {
-											$MatchFound = $true
-										}
-									}
-									Default {
-										if ($Package.PackageName -match $OSName) {
-											$MatchFound = $true
-										}
-									}
-								}
-							}
-							else {
-								$MatchFound = $true
-							}
-							
-							# Add package to list if match is found
-							if ($MatchFound -eq $true) {
-								Write-CMLogEntry -Value "Match found for manufacturer, operating system and architecture: $($Package.PackageName) ($($Package.PackageID))" -Severity 1
-								$PackageList.Add($Package) | Out-Null
-							}
+							Write-CMLogEntry -Value "Match found for manufacturer, operating system and architecture: $($Package.PackageName) ($($Package.PackageID))" -Severity 1
+							$PackageList.Add($Package) | Out-Null
 						}
 						else {
 							Write-CMLogEntry -Value "Driver package does not meet computer model, manufacturer and operating system and architecture criteria: $($Package.PackageName) ($($Package.PackageID))" -Severity 2
@@ -603,7 +581,7 @@ Process {
 							Write-CMLogEntry -Value "Driver package list contains multiple matches, attempting to download driver package content based up latest package creation date" -Severity 1
 							
 							# Determine matching driver package from array list with vendor specific solutions
-							if (($ComputerManufacturer -like "Hewlett-Packard") -and ($OSName -like "Windows 10")) {
+							if (($ComputerManufacturer -in "Hewlett-Packard","Microsoft") -and ($OSName -like "Windows 10")) {
 								Write-CMLogEntry -Value "Vendor specific matching required before downloading content. Attempting to match $($ComputerManufacturer) driver package based on OS build number: $($OSImageVersion)" -Severity 1
 								if ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) {
 									$Package = ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
