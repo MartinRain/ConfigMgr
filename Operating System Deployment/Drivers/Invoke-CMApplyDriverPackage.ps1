@@ -547,10 +547,10 @@ Process {
 									if ($DeploymentType -match "BareMetal") {
 										# Apply drivers recursively from downloaded driver package location
 										Write-CMLogEntry -Value "Driver package content downloaded successfully, attempting to apply drivers using dism.exe located in: $($TSEnvironment.Value('OSDDriverPackage01'))" -Severity 1
-										$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse"
+										$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse /LogPath:$LogsDirectory\dism.log"
 										
 										# Validate driver injection
-										if ($ApplyDriverInvocation -eq 0) {
+										if ($ApplyDriverInvocation -in 0,2) {
 											Write-CMLogEntry -Value "Successfully applied drivers using dism.exe" -Severity 1
 										}
 										else {
@@ -605,10 +605,10 @@ Process {
 										if ($DeploymentType -match "BareMetal") {
 											# Apply drivers recursively from downloaded driver package location
 											Write-CMLogEntry -Value "Driver package content downloaded successfully, attempting to apply drivers using dism.exe located in: $($TSEnvironment.Value('OSDDriverPackage01'))" -Severity 1
-											$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse"
+											$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse /LogPath:$LogsDirectory\dism.log"
 											
 											# Validate driver injection
-											if ($ApplyDriverInvocation -eq 0) {
+											if ($ApplyDriverInvocation -in 0,2) {
 												Write-CMLogEntry -Value "Successfully applied drivers using dism.exe" -Severity 1
 												
 											}
@@ -666,10 +666,10 @@ Process {
 											if ($PSBoundParameters.ContainsKey("DriverUpdate") -eq $false) {
 												# Apply drivers recursively from downloaded driver package location
 												Write-CMLogEntry -Value "Driver fallback package content downloaded successfully, attempting to apply drivers using dism.exe located in: $($TSEnvironment.Value('OSDDriverPackage01'))" -Severity 1
-												$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse"
+												$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse /LogPath:$LogsDirectory\dism.log"
 												
 												# Validate driver injection
-												if ($ApplyDriverInvocation -eq 0) {
+												if ($ApplyDriverInvocation -in 0,2) {
 													Write-CMLogEntry -Value "Successfully applied drivers using dism.exe" -Severity 1
 												}
 												else {
