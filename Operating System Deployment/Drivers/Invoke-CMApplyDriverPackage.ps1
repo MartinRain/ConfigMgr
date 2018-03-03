@@ -238,9 +238,9 @@ Process {
 		try {
 			Write-CMLogEntry -Value "Starting package content download process, this might take some time" -Severity 1
 			
-			if (Test-Path -Path "$env:SystemRoot\CCM\OSDDownloadContent.exe") {
+			if (Test-Path -Path "C:\Windows\CCM\OSDDownloadContent.exe") {
 				Write-CMLogEntry -Value "Starting package content download process (FullOS), this might take some time" -Severity 1
-				$ReturnCode = Invoke-Executable -FilePath "$env:SystemRoot\CCM\OSDDownloadContent.exe"
+				$ReturnCode = Invoke-Executable -FilePath "C:\Windows\CCM\OSDDownloadContent.exe"
 			}
 			else {
 				Write-CMLogEntry -Value "Starting package content download process (WinPE), this might take some time" -Severity 1
@@ -404,6 +404,7 @@ Process {
 			$SystemSKU = ((Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty Model).SubString(0, 4)).Trim()
 		}
 	}
+
 	Write-CMLogEntry -Value "Manufacturer determined as: $($ComputerManufacturer)" -Severity 1
 	Write-CMLogEntry -Value "Computer model determined as: $($ComputerModel)" -Severity 1
 	if (-not ([string]::IsNullOrEmpty($SystemSKU))) {
@@ -493,7 +494,7 @@ Process {
 					$ComputerDetectionResult = $false
 					switch ($ComputerDetectionMethod) {
 						"ComputerModel" {
-							if ($Package.PackageName.Split("-").Replace($ComputerManufacturer, "").Trim()[1] -eq $ComputerModel) {
+							if ($Package.PackageName.Split("-").Replace($ComputerManufacturer, "").Trim()[1] -match $ComputerModel) {
 								Write-CMLogEntry -Value "Match found for computer model using detection method: $($ComputerDetectionMethod) ($($ComputerModel))" -Severity 1
 								$ComputerDetectionResult = $true
 							}
@@ -509,8 +510,35 @@ Process {
 					# Match manufacturer, operating system name and architecture criteria
 					if ($ComputerDetectionResult -eq $true) {
 						if (($ComputerManufacturer -match $Package.PackageManufacturer) -and ($Package.PackageName -match $OSName) -and ($Package.PackageName -match $OSImageArchitecture)) {
-							Write-CMLogEntry -Value "Match found for manufacturer, operating system and architecture: $($Package.PackageName) ($($Package.PackageID))" -Severity 1
-							$PackageList.Add($Package) | Out-Null
+							# Match operating system criteria per manufacturer for Windows 10 packages only
+							if ($OSName -like "Windows 10") {
+								switch ($ComputerManufacturer) {
+									"Hewlett-Packard" {
+										if ($Package.PackageName -match ([System.Version]$OSImageVersion).Build) {
+											$MatchFound = $true
+										}
+									}
+									"Microsoft" {
+										if ($Package.PackageName -match $OSImageVersion) {
+											$MatchFound = $true
+										}
+									}
+									Default {
+										if ($Package.PackageName -match $OSName) {
+											$MatchFound = $true
+										}
+									}
+								}
+							}
+							else {
+								$MatchFound = $true
+							}
+							
+							# Add package to list if match is found
+							if ($MatchFound -eq $true) {
+								Write-CMLogEntry -Value "Match found for manufacturer, operating system and architecture: $($Package.PackageName) ($($Package.PackageID))" -Severity 1
+								$PackageList.Add($Package) | Out-Null
+							}
 						}
 						else {
 							Write-CMLogEntry -Value "Driver package does not meet computer model, manufacturer and operating system and architecture criteria: $($Package.PackageName) ($($Package.PackageID))" -Severity 2
@@ -548,10 +576,10 @@ Process {
 									if ($DeploymentType -match "BareMetal") {
 										# Apply drivers recursively from downloaded driver package location
 										Write-CMLogEntry -Value "Driver package content downloaded successfully, attempting to apply drivers using dism.exe located in: $($TSEnvironment.Value('OSDDriverPackage01'))" -Severity 1
-										$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse /LogPath:$LogsDirectory\dism.log"
+										$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse"
 										
 										# Validate driver injection
-										if ($ApplyDriverInvocation -in 0,2) {
+										if ($ApplyDriverInvocation -eq 0) {
 											Write-CMLogEntry -Value "Successfully applied drivers using dism.exe" -Severity 1
 										}
 										else {
@@ -582,14 +610,9 @@ Process {
 							Write-CMLogEntry -Value "Driver package list contains multiple matches, attempting to download driver package content based up latest package creation date" -Severity 1
 							
 							# Determine matching driver package from array list with vendor specific solutions
-							if (($ComputerManufacturer -in "Hewlett-Packard","Microsoft") -and ($OSName -like "Windows 10")) {
+							if (($ComputerManufacturer -like "Hewlett-Packard") -and ($OSName -like "Windows 10")) {
 								Write-CMLogEntry -Value "Vendor specific matching required before downloading content. Attempting to match $($ComputerManufacturer) driver package based on OS build number: $($OSImageVersion)" -Severity 1
-								if ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) {
-									$Package = ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
-								}
-								else {
-									$Package = $PackageList | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
-								}
+								$Package = ($PackageList | Where-Object { $_.PackageName -match ([System.Version]$OSImageVersion).Build }) | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
 							}
 							else {
 								$Package = $PackageList | Sort-Object -Property PackageCreated -Descending | Select-Object -First 1
@@ -606,10 +629,10 @@ Process {
 										if ($DeploymentType -match "BareMetal") {
 											# Apply drivers recursively from downloaded driver package location
 											Write-CMLogEntry -Value "Driver package content downloaded successfully, attempting to apply drivers using dism.exe located in: $($TSEnvironment.Value('OSDDriverPackage01'))" -Severity 1
-											$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse /LogPath:$LogsDirectory\dism.log"
+											$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse"
 											
 											# Validate driver injection
-											if ($ApplyDriverInvocation -in 0,2) {
+											if ($ApplyDriverInvocation -eq 0) {
 												Write-CMLogEntry -Value "Successfully applied drivers using dism.exe" -Severity 1
 												
 											}
@@ -667,10 +690,10 @@ Process {
 											if ($PSBoundParameters.ContainsKey("DriverUpdate") -eq $false) {
 												# Apply drivers recursively from downloaded driver package location
 												Write-CMLogEntry -Value "Driver fallback package content downloaded successfully, attempting to apply drivers using dism.exe located in: $($TSEnvironment.Value('OSDDriverPackage01'))" -Severity 1
-												$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse /LogPath:$LogsDirectory\dism.log"
+												$ApplyDriverInvocation = Invoke-Executable -FilePath "Dism.exe" -Arguments "/Image:$($TSEnvironment.Value('OSDisk'))\ /Add-Driver /Driver:$($TSEnvironment.Value('OSDDriverPackage01')) /Recurse"
 												
 												# Validate driver injection
-												if ($ApplyDriverInvocation -in 0,2) {
+												if ($ApplyDriverInvocation -eq 0) {
 													Write-CMLogEntry -Value "Successfully applied drivers using dism.exe" -Severity 1
 												}
 												else {
