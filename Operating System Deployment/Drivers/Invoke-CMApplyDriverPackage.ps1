@@ -42,6 +42,7 @@
     Contact:     @NickolajA / @MoDaly_IT
     Created:     2017-03-27
     Updated:     2018-02-21
+
 	
     Minimum required version of ConfigMgr WebService: 1.5.0
     
